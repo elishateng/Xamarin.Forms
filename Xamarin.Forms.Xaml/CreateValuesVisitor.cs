@@ -92,7 +92,16 @@ namespace Xamarin.Forms.Xaml
 					}
 					if (value == null) {
 						try {
-							value = Activator.CreateInstance(type);
+							if (type.GetTypeInfo().DeclaredConstructors.Any(ci=>ci.IsPublic && ci.GetParameters().Length==0))
+                            {
+                                //default constructor prior
+                                value = Activator.CreateInstance(type);
+                            }
+                            if (value == null)
+                            {
+                                //constructor with default parameters
+                                value = Activator.CreateInstance(type, BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance | BindingFlags.OptionalParamBinding, null, new object[] { Type.Missing }, CultureInfo.CurrentCulture);
+                            }
 						}
 						catch (Exception e) when (e is TargetInvocationException || e is MemberAccessException) {
 							value = XamlLoader.InstantiationFailedCallback?.Invoke(new XamlLoader.CallbackTypeInfo { XmlNamespace = node.XmlType.NamespaceUri, XmlTypeName = node.XmlType.Name }, type, e) ?? throw e;
@@ -221,9 +230,9 @@ namespace Xamarin.Forms.Xaml
 
 			if (!node.Properties.ContainsKey(XmlName.xFactoryMethod))
 			{
-				//non-default ctor
+				//non-default ctor (with default parameter)
 				try {
-					return Activator.CreateInstance(nodeType, arguments);
+					return Activator.CreateInstance(nodeType, BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance | BindingFlags.OptionalParamBinding, null,  arguments, CultureInfo.CurrentCulture);
 				}
 				catch (Exception e) when (e is TargetInvocationException || e is MissingMemberException) {
 					return XamlLoader.InstantiationFailedCallback?.Invoke(new XamlLoader.CallbackTypeInfo { XmlNamespace = node.XmlType.NamespaceUri, XmlTypeName = node.XmlType.Name }, nodeType, e) ?? throw e;
